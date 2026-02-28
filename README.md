@@ -1,5 +1,5 @@
 # AI chat GTK demo with stream support
-AI chat GTK demo app to show GTK4 / Vala / libsoup3 , the key code is make for testing for the project [Kangaroo Database Tool](https://github.com/dbkangaroo/kangaroo)
+AI Chat (GTK4 demo) — A simple AI chat application implemented in Vala using libsoup3 with stream support. the code is made for testing and prototyping within the project [Kangaroo Database Tool](https://github.com/dbkangaroo/kangaroo)
 ![Pdfium GTK app screenshot](images/screenshot.png)
 
 ## Dependencies
