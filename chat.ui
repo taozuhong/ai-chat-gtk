@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="ChatWindow" parent="GtkApplicationWindow">
+    <property name="title">AI Chat GTK demo (Stream)</property>
+    <property name="default-width">600</property>
+    <property name="default-height">500</property>
+    <property name="titlebar">
+      <object class="GtkHeaderBar">
+        <property name="decoration-layout">icon:minimize,maximize,close</property>
+        <child type="start">
+          <object class="GtkToggleButton" id="toggle_option">
+            <property name="valign">center</property>
+            <property name="tooltip-text" translatable="yes">Option</property>
+            <property name="icon-name">applications-system-symbolic</property>
+            <property name="active" bind-source="revealer" bind-property="reveal-child" bind-flags="sync-create|bidirectional"/>
+            <style>
+              <class name="flat"/>
+            </style>
+          </object>
+        </child>
+      </object>
+    </property>
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <property name="spacing">5</property>
+        <property name="margin-start">6</property>
+        <property name="margin-end">6</property>
+        <property name="margin-top">6</property>
+        <property name="margin-bottom">6</property>
+        <child>
+          <object class="GtkRevealer" id="revealer">
+            <property name="halign">fill</property>
+            <property name="valign">start</property>
+            <property name="hexpand">false</property>
+            <property name="transition-duration">300</property>
+            <property name="transition-type">slide-down</property>
+            <property name="reveal-child">false</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">5</property>
+                <child>
+                  <object class="GtkEntry" id="entry_api_url">
+                    <property name="hexpand">true</property>
+                    <property name="placeholder_text" translatable="yes">API url</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkEntry" id="entry_api_key">
+                    <property name="hexpand">true</property>
+                    <property name="placeholder_text" translatable="yes">API Key or emtpy for local mode</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkEntry" id="entry_api_model">
+                    <property name="hexpand">true</property>
+                    <property name="placeholder_text" translatable="yes">API model</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkScrolledWindow" id="scroll_window">
+            <property name="hexpand">TRUE</property>
+            <property name="vexpand">TRUE</property>
+            <child>
+              <object class="GtkListBox" id="view_messages">
+                <property name="selection_mode">none</property>
+                <property name="vexpand">true</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">horizontal</property>
+            <property name="spacing">5</property>
+            <child>
+              <object class="GtkEntry" id="entry_prompt">
+                <property name="hexpand">true</property>
+                <property name="placeholder_text" translatable="yes">Type your message here</property>
+                <style>
+                  <class name="flat"/>
+                </style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="button_send">
+                <property name="halign">end</property>
+                <signal name="clicked" handler="button_send_clicked_handler"/>
+                <style>
+                  <class name="flat"/>
+                </style>
+                <property name="child">
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">5</property>
+                    <property name="valign">center</property>
+                    <child>
+                      <object class="GtkImage">
+                        <property name="icon-name">system-file-manager-symbolic</property>
+                        <property name="valign">center</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Send</property>
+                        <property name="use-underline">True</property>
+                        <property name="valign">center</property>
+                      </object>
+                    </child>
+                  </object>
+                </property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>
