@@ -29,7 +29,7 @@ public class ChatWindow : Gtk.ApplicationWindow {
         Object (application: app);
 
         this.entry_api_url.text = API_URL;
-        this.entry_api_model.text = "qwen";
+        this.entry_api_model.text = "qwen3.5:0.8b";
     }
 
     [GtkCallback]
@@ -44,7 +44,7 @@ public class ChatWindow : Gtk.ApplicationWindow {
         }
 
         // 1. 显示用户消息
-        add_message_bubble ("You", text);
+        add_message_bubble ("You", text, "accent");
         this.entry_prompt.set_text (""); // 清空输入
         this.button_send.set_sensitive (false); // 禁用按钮
 
@@ -55,14 +55,15 @@ public class ChatWindow : Gtk.ApplicationWindow {
         conversation_history.add_object_element(user_msg);
 
         // 3. 准备助手消息的占位符
-        var assistant_bubble = add_message_bubble ("Assistant", "正在思考...");
+        var bubble_thinking = add_message_bubble ("Assistant", "正在思考...", "warning");
+        var bubble_official = add_message_bubble ("Assistant", "正在回答...", "success");
         
         // 4. 启动异步请求
-        send_request_async.begin (key, assistant_bubble);
+        send_request_async.begin (key, bubble_thinking, bubble_official);
     }
 
     // 添加消息气泡
-    private Gtk.Label add_message_bubble (string author, string text) {
+    private Gtk.Label add_message_bubble (string author, string text, string css_class) {
         var label = new Gtk.Label (@"$author: $text");
         label.wrap = true;
         label.wrap_mode = Pango.WrapMode.WORD_CHAR;
@@ -72,7 +73,7 @@ public class ChatWindow : Gtk.ApplicationWindow {
         label.margin_start = 8;
         label.margin_end = 8;
         label.selectable = true;
-        
+        label.add_css_class(css_class);
         this.view_messages.append (label);
         
         // 滚动到底部
@@ -86,7 +87,7 @@ public class ChatWindow : Gtk.ApplicationWindow {
     }
 
     // 异步发送请求并处理流式响应
-    private async void send_request_async (string api_key, Gtk.Label response_label) {
+    private async void send_request_async (string api_key, Gtk.Label label_thinking, Gtk.Label label_official) {
         var session = new Soup.Session ();
         var message = new Soup.Message ("POST", "%s/chat/completions".printf(this.entry_api_url.text));
 
@@ -128,11 +129,15 @@ public class ChatWindow : Gtk.ApplicationWindow {
             InputStream stream = yield session.send_async (message, Priority.DEFAULT, null);
 
             // 处理流式数据
+            string line, chunk;
+            Json.Node json_node;
+            Json.Array json_array;
+            Json.Object json_object;
+            Json.Parser json_parser = new Json.Parser ();
             var data_input = new DataInputStream (stream);
-            string line;
 
             while ((line = yield data_input.read_line_async (Priority.DEFAULT, null)) != null) {
-                // SSE 格式解析: "data: {...}"
+                GLib.warning("Line: [%s]", line);
                 if (line.has_prefix ("data: ")) {
                     string json_str = line.substring (6);
 
@@ -141,26 +146,38 @@ public class ChatWindow : Gtk.ApplicationWindow {
                     }
 
                     // 解析 JSON 片段
-                    var parser = new Json.Parser ();
                     try {
-                        parser.load_from_data (json_str);
-                        var root = parser.get_root ().get_object ();
+                        json_parser.load_from_data (json_str);
+                        json_object = json_parser.get_root ().get_object ();
 
                         // OpenAI 格式: choices[0].delta.content
-                        if (root.has_member ("choices")) {
-                            var choices = root.get_array_member ("choices");
-                            var first_choice = choices.get_object_element (0);
+                        if (json_object.has_member ("choices")) {
+                            json_array = json_object.get_array_member ("choices");
+                            json_object = json_array.get_object_element (0);
                             
-                            if (first_choice.has_member ("delta")) {
-                                var delta = first_choice.get_object_member ("delta");
-                                if (delta.has_member ("content")) {
-                                    string chunk = delta.get_string_member ("content");
+                            if (json_object.has_member ("delta")) {
+                                var delta = json_object.get_object_member ("delta");
+                                if (delta.has_member ("reasoning")) {
+                                    chunk = delta.get_string_member ("reasoning");
                                     full_response.append (chunk);
 
                                     // 更新 UI (必须在主线程安全地进行，Idle.add 确保这一点)
-                                    string current_text = full_response.str;
+                                    chunk = full_response.str;
                                     Idle.add(() => {
-                                        response_label.set_text (@"Assistant: $current_text");
+                                        label_thinking.set_text (@"Assistant: $chunk");
+                                        // 继续滚动到底部
+                                        var adj = this.scroll_window.vadjustment;
+                                        adj.set_value (adj.upper - adj.page_size);
+                                        return false;
+                                    });
+                                } else {
+                                    chunk = delta.get_string_member ("content");
+                                    full_response.append (chunk);
+
+                                    // 更新 UI (必须在主线程安全地进行，Idle.add 确保这一点)
+                                    chunk = full_response.str;
+                                    Idle.add(() => {
+                                        label_official.set_text (@"Assistant: $chunk");
                                         // 继续滚动到底部
                                         var adj = this.scroll_window.vadjustment;
                                         adj.set_value (adj.upper - adj.page_size);
@@ -185,7 +202,7 @@ public class ChatWindow : Gtk.ApplicationWindow {
         } catch (Error e) {
             stderr.printf ("Network Error: %s\n", e.message);
             Idle.add(() => {
-                response_label.set_text (@"Error: $(e.message)");
+                label_official.set_text (@"Error: $(e.message)");
                 return false;
             });
         } finally {
