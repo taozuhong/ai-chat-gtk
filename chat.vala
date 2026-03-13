@@ -115,7 +115,9 @@ public class ChatWindow : Gtk.ApplicationWindow {
         message.set_request_body_from_bytes ("application/json", new Bytes (json_body.data));
 
         // 设置 Headers
-        message.request_headers.append ("Authorization", @"Bearer $api_key");
+        if (0 < api_key.length) {
+            message.request_headers.append ("Authorization", @"Bearer $api_key");
+        }
         message.request_headers.append ("Content-Type", "application/json");
 
         // 用于累积完整的回复
