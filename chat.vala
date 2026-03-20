@@ -44,7 +44,7 @@ public class ChatWindow : Gtk.ApplicationWindow {
         }
 
         // 1. 显示用户消息
-        add_message_bubble ("You", text, "");
+        add_message_bubble ("You", text, "", true);
         this.entry_prompt.set_text (""); // 清空输入
         this.button_send.set_sensitive (false); // 禁用按钮
 
@@ -55,15 +55,15 @@ public class ChatWindow : Gtk.ApplicationWindow {
         conversation_history.add_object_element(user_msg);
 
         // 3. 准备助手消息的占位符
-        var bubble_thinking = add_message_bubble ("Assistant", "正在思考...", "titlebar");
-        var bubble_official = add_message_bubble ("Assistant", "正在回答...", "");
+        var bubble_thinking = add_message_bubble ("Assistant", "正在思考...", "titlebar", false);
+        var bubble_official = add_message_bubble ("Assistant", "正在回答...", "", true);
         
         // 4. 启动异步请求
         send_request_async.begin (key, bubble_thinking, bubble_official);
     }
 
     // 添加消息气泡
-    private Gtk.Label add_message_bubble (string author, string text, string css_class = "") {
+    private Gtk.Label add_message_bubble (string author, string text, string css_class = "", bool has_separator = false) {
         var label = new Gtk.Label (@"$author: $text");
         label.wrap = true;
         label.wrap_mode = Pango.WrapMode.WORD_CHAR;
@@ -79,6 +79,10 @@ public class ChatWindow : Gtk.ApplicationWindow {
             label.add_css_class(css_class);
         }
         this.view_messages.append (label);
+
+        if (has_separator) {
+            this.view_messages.append(new Gtk.Separator(Gtk.Orientation.HORIZONTAL));
+        }
         
         // 滚动到底部
         Idle.add(() => {
