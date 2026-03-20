@@ -157,8 +157,8 @@ public class ChatWindow : Gtk.ApplicationWindow {
                             
                             if (json_object.has_member ("delta")) {
                                 var delta = json_object.get_object_member ("delta");
-                                if (delta.has_member ("reasoning")) {
-                                    chunk = delta.get_string_member ("reasoning");
+                                chunk = delta.get_string_member("reasoning") ?? delta.get_string_member("reasoning_content");
+                                if (null != chunk) {
                                     full_response.append (chunk);
 
                                     // 更新 UI (必须在主线程安全地进行，Idle.add 确保这一点)
