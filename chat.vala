@@ -44,7 +44,7 @@ public class ChatWindow : Gtk.ApplicationWindow {
         }
 
         // 1. 显示用户消息
-        add_message_bubble ("You", text, "accent");
+        add_message_bubble ("You", text, "");
         this.entry_prompt.set_text (""); // 清空输入
         this.button_send.set_sensitive (false); // 禁用按钮
 
@@ -55,25 +55,29 @@ public class ChatWindow : Gtk.ApplicationWindow {
         conversation_history.add_object_element(user_msg);
 
         // 3. 准备助手消息的占位符
-        var bubble_thinking = add_message_bubble ("Assistant", "正在思考...", "warning");
-        var bubble_official = add_message_bubble ("Assistant", "正在回答...", "success");
+        var bubble_thinking = add_message_bubble ("Assistant", "正在思考...", "titlebar");
+        var bubble_official = add_message_bubble ("Assistant", "正在回答...", "");
         
         // 4. 启动异步请求
         send_request_async.begin (key, bubble_thinking, bubble_official);
     }
 
     // 添加消息气泡
-    private Gtk.Label add_message_bubble (string author, string text, string css_class) {
+    private Gtk.Label add_message_bubble (string author, string text, string css_class = "") {
         var label = new Gtk.Label (@"$author: $text");
         label.wrap = true;
         label.wrap_mode = Pango.WrapMode.WORD_CHAR;
-        label.halign = Gtk.Align.START;
+        label.hexpand = true;
+        label.halign = Gtk.Align.FILL;
+        label.xalign = 0.0f;
         label.margin_top = 4;
         label.margin_bottom = 4;
         label.margin_start = 8;
         label.margin_end = 8;
         label.selectable = true;
-        label.add_css_class(css_class);
+        if (0 < css_class.length) {
+            label.add_css_class(css_class);
+        }
         this.view_messages.append (label);
         
         // 滚动到底部
@@ -122,6 +126,8 @@ public class ChatWindow : Gtk.ApplicationWindow {
         message.request_headers.append ("Content-Type", "application/json");
 
         // 用于累积完整的回复
+        var builder_think = new StringBuilder ();
+        var builder_content = new StringBuilder ();
         var full_response = new StringBuilder ();
 
         try {
@@ -159,10 +165,11 @@ public class ChatWindow : Gtk.ApplicationWindow {
                                 var delta = json_object.get_object_member ("delta");
                                 chunk = delta.get_string_member("reasoning") ?? delta.get_string_member("reasoning_content");
                                 if (null != chunk) {
+                                    builder_think.append (chunk);
                                     full_response.append (chunk);
 
                                     // 更新 UI (必须在主线程安全地进行，Idle.add 确保这一点)
-                                    chunk = full_response.str;
+                                    chunk = builder_think.str.make_valid();
                                     Idle.add(() => {
                                         label_thinking.set_text (@"Assistant: $chunk");
                                         // 继续滚动到底部
@@ -172,10 +179,11 @@ public class ChatWindow : Gtk.ApplicationWindow {
                                     });
                                 } else {
                                     chunk = delta.get_string_member ("content");
+                                    builder_content.append (chunk);
                                     full_response.append (chunk);
 
                                     // 更新 UI (必须在主线程安全地进行，Idle.add 确保这一点)
-                                    chunk = full_response.str;
+                                    chunk = builder_content.str.make_valid();
                                     Idle.add(() => {
                                         label_official.set_text (@"Assistant: $chunk");
                                         // 继续滚动到底部
